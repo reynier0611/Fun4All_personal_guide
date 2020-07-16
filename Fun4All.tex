@@ -28,7 +28,7 @@
 \newcommand\tab[1][1cm]{\hspace*{#1}}
 
 \title{Running All-Si tracker simulations with Fun4All on Cori}
-\author{Reynier Cruz Torres}
+\author{Reynier Cruz Torres \\ (borrowing some text from D. Dixit and F. Torrales-Acosta)}
 
 \begin{document}
 
@@ -202,7 +202,84 @@ Follow the steps from section~\ref{sec:build} to build this package.
 
 % ========================================================================================
 \newpage
-\section{Running batch jobs on Cori}
+\section{Running All-Si tracker code}
+
+\subsection{Code details}
+
+The main macro is: \verb|g4lblvtx/macros/Fun4All_G4_FastMom.C|.
+This section describes some details from this code.
+
+\subsubsection{Detector geometry}
+
+The detector geometry was created in EICroot, saved into a TGeo file, and then translated into a gdml file. The gdml
+file where the detector geometry is defined is: \verb|FAIRGeom.gdml|, and is loaded in the main macro in the lines that read:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+AllSiliconTrackerSubsystem *allsili = new AllSiliconTrackerSubsystem();
+allsili->set_string_param("GDMPath","FAIRGeom.gdml");
+
+allsili->AddAssemblyVolume("VST");      // Barrel
+allsili->AddAssemblyVolume("FST");      // Forward disks
+allsili->AddAssemblyVolume("BST");      // Backward disks
+allsili->AddAssemblyVolume("BEAMPIPE"); // Beampipe
+\end{verbnobox}
+\end{tcolorbox}
+	
+\subsubsection{Event generator}
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+const int particle_gen = 1;
+\end{verbnobox}
+\end{tcolorbox}
+
+Below are the possible settings for this variable:
+
+\begin{itemize}
+\item \verb|particle_gen = 1|, the generator used is a particle generator, which generates a given particle per event over an extended range in angles, momenta, etcetera.
+\item \verb|particle_gen = 2|, the generator used is a particle gun, which shoots the same particle with the same properties (angles, momenta, ...) over and over. 
+\item \verb|particle_gen = 3|, the generator used is a ``simple event generator'' (using the Fun4All class \verb|PHG4SimpleEventGenerator|) which can generate, for example, 100-pion events.
+This cab be used for primary-vertex studies.
+\item \verb|particle_gen = 4|, the generator used is pythia8.
+\end{itemize}
+
+\subsubsection{Magnetic field}
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+const int magnetic_field = 4;   // 1 = uniform 1.5T, 2 = uniform 3.0T, 3 = sPHENIX 1.4T map, 4 = Beast 3.0T map
+\end{verbnobox}
+\end{tcolorbox}
+
+Below are the possible settings for this variable:
+
+\begin{itemize}
+\item \verb|magnetic_field = 1|, uniform 1.5 T solenoidal field.
+\item \verb|magnetic_field = 2|, uniform 3.0 solenoidal field.
+\item \verb|magnetic_field = 3|, realistic sPHENIX (BaBar) 1.4 T magnetic-field map.
+\item \verb|magnetic_field = 4|, realistic Beast 3.0 T magnetic-field map.
+\end{itemize}
+
+% ========================================================================================
+
+\subsection{Running All-Si code on login node}
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+root -l Fun4All_G4_FastMom.C
+\end{verbnobox}
+\end{tcolorbox}
+
+or by first loading root, and then doing:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+.x Fun4All_G4_FastMom.C
+\end{verbnobox}
+\end{tcolorbox}
+
+\subsection{Running batch jobs on Cori}
 
 Some tips to get started with Slurm can be found \href{https://slurm.schedmd.com/quickstart.html}{here}.
 
