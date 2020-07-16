@@ -1,0 +1,244 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{geometry}
+\usepackage{color}
+\usepackage{verbatimbox}
+\geometry{margin=2cm}
+
+\usepackage{url}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+\usepackage{float}
+
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+
+\newcommand\tab[1][1cm]{\hspace*{#1}}
+
+\title{Running All-Si tracker simulations with Fun4All on Cori}
+\author{Reynier Cruz Torres}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+% ========================================================================================
+\newpage
+\section{Logging into Cori and getting Fun4All working}
+
+First, ssh into cori (\verb|ssh -Y username@cori.nersc.gov|) and go to the directory where Fun4All is to be installed.
+Clone the Singularity container from Github and install the package following:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+git clone https://github.com/sPHENIX-Collaboration/Singularity.git
+cd Singularity/
+./updatebuild.sh
+shifter --image=docker:ddixit/fun4all:eicresearch /bin/bash
+\end{verbnobox}  
+\end{tcolorbox}
+
+The last command line above lets you enter the docker image using shifter and sets the shell to bash.
+
+Note: here we write short paths for simplicity, but full paths should be used.
+For example, the \verb|sphenix_setup.sh| script is located inside:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+Singularity/cvfms/sphenix.sdcc.bnl.gov/x8664_sl7/opt/sphenix/core/bin/sphenix_setup.sh
+\end{verbnobox}  
+\end{tcolorbox}
+
+but here we will write it as \verb|local_path_to/opt/sphenix/core/bin/sphenix_setup.sh| because it is likely that the \verb|x8664_sl7| number might be different for different users.
+Thus, it is important to remember where your Singularity folder is located, and map out your paths correctly.
+
+\subsection{Modifying the setup script (only need to follow these steps once)}
+The following steps are to modify and run the setup script in order to give your access to root as well all the sPHENIX libraries, object, and header files.
+In the code below, change \verb|new.#| with the actual number you see associated with the new. directory in your path. For example, if it says \verb|release/release_new/new.2|, use \verb|new.2|
+
+\begin{enumerate}
+\item Open \verb|local_path_to/opt/sphenix/core/bin/sphenix_setup.sh| using a text editor.
+\item Find the line \verb|if [ -z "$OFFLINE_MAIN" ]|
+\item Modify that if statement block (in bash if statements start with ``if'' and end with ``fi'') to look like this:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+if [ -z "$OFFLINE_MAIN" ]
+then
+  if [ ! -d ${optbasepath}/release/release_new/$opt_v ]
+  then
+    opt_v="new.#"
+  fi
+  export OFFLINE_MAIN=${optbasepath}/release/release_new/$opt_v
+fi
+\end{verbnobox}  
+\end{tcolorbox}
+
+where you change \verb|new.#| with the actual number you see associated with the ``new'' directory in your path. For example, if it says \verb|release/release_new/new.2|, use \verb|new.2|.
+This should make \verb|$OFFLINE_MAIN| point to where all your sPHENIX code is located.
+For example, a path could look like:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+Singularity/cvmfs/sphenix.sdcc.bnl.gov/x8664_sl7/release/release_new/new.2/
+\end{verbnobox}  
+\end{tcolorbox}
+
+and in this directory, you should have the following (you can check this with an ls):
+bin  geant4  include  lib  rebuild.info  rebuild.log  root  sartre  share
+
+\item Save \verb|sphenix_setup.sh|.
+
+\item In the terminal, run: \verb|source local_path_to/opt/sphenix/core/bin/sphenix_setup.sh -n|
+
+\item Check that the setup was successful by running in the terminal: \verb|lsb_release -a|.
+You should see the following output:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+LSB Version:	:core-4.1-amd64:core-4.1-ia32:core-4.1-noarch
+Distributor ID:	Scientific
+Description:	Scientific Linux release 7.3 (Nitrogen)
+Release:	7.3
+Codename:	Nitrogen
+Input: root #see if root works for you.
+\end{verbnobox}  
+\end{tcolorbox}
+
+\end{enumerate}
+
+At this stage you can also run \verb|root| in the terminal to check that Root is already working.
+Once you have root working, try the steps from the ``Try an event display'' tutorial here:
+
+\href{https://github.com/sPHENIX-Collaboration/macros}{https://github.com/sPHENIX-Collaboration/macros}
+
+Remember, we will be using \verb|sphenix_setup.sh| not \verb|.csh|. If the you can run ``Try an event display successfully'', congratulations, you are able to run Fun4All on Cori.
+Finally, create a directory called \verb|install| inside the Singularity directory.
+
+\subsection{Using Fun4All from now on (follow these steps every time you log into Cori)}
+\label{sec:every_login}
+
+From now on, you will always have to do the following steps to access Fun4All again on Cori:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+shifter --image=docker:ddixit/fun4all:eicresearch /bin/bash
+source local_path_to/opt/sphenix/core/bin/sphenix_setup.sh -n
+export MYINSTALL=/global/path/to/Singularity/install
+source Singularity/cvmfs/sphenix.sdcc.bnl.gov/x8664_sl7/opt/sphenix/core/bin/setup_local.sh $MYINSTALL
+\end{verbnobox}  
+\end{tcolorbox}
+
+Step 1 enters the Singularity image, and Step 2 sets up all environment variables.
+
+% ========================================================================================
+\newpage
+\section{Additional repositories}
+
+\subsection{Building a package}
+\label{sec:build}
+
+The steps are explained in detail in the following page in the ``Building a package'' section:
+
+\href{https://wiki.bnl.gov/sPHENIX/index.php/Example_of_using_DST_nodes}{https://wiki.bnl.gov/sPHENIX/index.php/Example\_of\_using\_DST\_nodes}
+
+The basic steps are the following:
+
+\begin{enumerate}
+\item Create a build directory. For instance, if the package that will be installed is called ``package'', do \verb|mkdir build_package|.
+\item Go into this directory: \verb|cd build_package|.
+\item \verb|path/to/package/source/autogen.sh --prefix=$MYINSTALL|.
+\item \verb|make install -j 4|
+\item Lastly, redo the last three steps from section~\ref{sec:every_login}:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+source local_path_to/opt/sphenix/core/bin/sphenix_setup.sh -n
+export MYINSTALL=/global/path/to/Singularity/install
+source Singularity/cvmfs/sphenix.sdcc.bnl.gov/x8664_sl7/opt/sphenix/core/bin/setup_local.sh $MYINSTALL
+\end{verbnobox}  
+\end{tcolorbox}
+
+\end{enumerate}
+
+\subsection{Jet Analysis}
+
+From inside the Singularity directory, clone the repository \href{https://github.com/ftoralesacosta/e_Jet_sPHENIX}{here}:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+git clone https://github.com/ftoralesacosta/e_Jet_sPHENIX
+\end{verbnobox}  
+\end{tcolorbox}
+
+Follow the steps from section~\ref{sec:build} to build this package.
+
+\subsection{All-Silicon tracker}
+
+The All-Silicon Tracker we have been studying at LBNL can be found \href{https://github.com/eic/g4lblvtx}{here}.
+From inside the Singularity directory, clone the repository:
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+git clone https://github.com/eic/g4lblvtx
+\end{verbnobox}  
+\end{tcolorbox}
+
+Follow the steps from section~\ref{sec:build} to build this package.
+
+% ========================================================================================
+\newpage
+\section{Running batch jobs on Cori}
+
+Some tips to get started with Slurm can be found \href{https://slurm.schedmd.com/quickstart.html}{here}.
+
+\href{https://github.com/eic/g4lblvtx/tree/master/cori_batch}{Here} is an example on how to submit a batch job on Cori.
+To submit the jobs from \verb|run_shared_pim.sh| do the following:
+
+\begin{enumerate}
+\item exit the container: \verb|exit|
+\item go to the directory where \verb|run_shared_pim.sh| is.
+\item run: \verb|sbatch run_shared_pim.sh|
+\end{enumerate}
+
+To check the status of your jobs, go in your internet browser to \href{https://my.nersc.gov/}{https://my.nersc.gov/} and login.
+Then go to the tab ``Cori Queues''.
+Alternatively, you can run in the terminal (from outside the Singularity container):
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+squeue -u username
+\end{verbnobox}  
+\end{tcolorbox}
+
+To cancel all submitted jobs, you can run in the terminal (from outside the Singularity container):
+
+\begin{tcolorbox}
+\begin{verbnobox}[\scriptsize]
+scancel -u username
+\end{verbnobox}  
+\end{tcolorbox}
+
+%\bibliography{bib_file}
+%\bibliographystyle{ieeetr}
+
+\end{document}
+
+
+
+
+
